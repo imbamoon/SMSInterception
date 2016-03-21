@@ -6,9 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
 import android.telephony.SmsMessage;
-
 import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
