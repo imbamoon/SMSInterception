@@ -18,11 +18,12 @@ import android.widget.SimpleCursorAdapter;
 public class WordsActivity extends AppCompatActivity {
 
     private Button btnAddWords;
-
     private SQLiteDatabase dbWrite;
     private SQLiteDatabase dbRead;
     private SimpleCursorAdapter wordListAdapter;
     private ListView listViewWord;
+    private BlackList blackList;
+    private Cursor cursor;
     private AdapterView.OnItemLongClickListener listViewItemLongClickListener=new AdapterView.OnItemLongClickListener() {
         @Override
         public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
@@ -31,12 +32,14 @@ public class WordsActivity extends AppCompatActivity {
                     .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            Cursor c=wordListAdapter.getCursor();
-                            c.moveToPosition(position);
-                            int itemId=c.getInt(c.getColumnIndex("_id"));
-                            dbWrite.delete("wordList","_id=?",new String[]{itemId+""});
-                            Cursor cursor=dbRead.query("wordList",null,null,null,null,null,null);
+                            cursor=wordListAdapter.getCursor();
+                            cursor.moveToPosition(position);
+                            int itemId=cursor.getInt(cursor.getColumnIndex("_id"));
+                            cursor.close();
+                            dbWrite.delete("wordList", "_id=?", new String[]{itemId + ""});
+                            cursor=dbRead.query("wordList",null,null,null,null,null,null);
                             wordListAdapter.changeCursor(cursor);
+                            listViewWord.setAdapter(wordListAdapter);
                         }
                     }).show();
             return true;
@@ -49,15 +52,14 @@ public class WordsActivity extends AppCompatActivity {
 
         listViewWord= (ListView) findViewById(R.id.listViewWord);
         btnAddWords= (Button) findViewById(R.id.btnAddWords);
-        BlackList blackList=new BlackList(this);
+        blackList=new BlackList(this);
         dbWrite=blackList.getWritableDatabase();
         dbRead=blackList.getReadableDatabase();
-        wordListAdapter=new SimpleCursorAdapter(this,R.layout.word_list_cell,null,new String[]{"word"},new int[]{R.id.blackWord});
-        Cursor cursor=dbRead.query("wordList",null,null,null,null,null,null);
-        wordListAdapter.changeCursor(cursor);
+        cursor=dbRead.query("wordList",null,null,null,null,null,null);
+        wordListAdapter=new SimpleCursorAdapter(this,R.layout.word_list_cell,cursor,new String[]{"word"},new int[]{R.id.blackWord});
         listViewWord.setAdapter(wordListAdapter);
         listViewWord.setOnItemLongClickListener(listViewItemLongClickListener);
-
+        //添加按钮点击事件
         btnAddWords.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -71,20 +73,15 @@ public class WordsActivity extends AppCompatActivity {
                         .setPositiveButton("确定",new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                BlackList blackList = new BlackList(getApplicationContext());
-                                SQLiteDatabase dbWrite = blackList.getWritableDatabase();
                                 if (!etWord.getText().toString().equals("")) {
+
                                     ContentValues contentValues = new ContentValues();
                                     contentValues.put("word", etWord.getText().toString());
                                     dbWrite.insert("wordList", null, contentValues);
-                                    dbWrite.close();
                                 }
-
-                                SQLiteDatabase dbRead = blackList.getReadableDatabase();
-                                Cursor cursor = dbRead.query("wordList", null, null, null, null, null, null);
+                                cursor = dbRead.query("wordList", null, null, null, null, null, null);
                                 wordListAdapter.changeCursor(cursor);
                                 listViewWord.setAdapter(wordListAdapter);
-                                dbRead.close();
                                 etWord.setText("");
                             }
                         })
@@ -97,6 +94,16 @@ public class WordsActivity extends AppCompatActivity {
                         .show();
             }
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        dbRead.close();
+        dbWrite.close();
+        if (cursor!=null){
+            cursor.close();
+        }
+        super.onDestroy();
     }
 }
 

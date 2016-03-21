@@ -24,11 +24,11 @@ public class BlackList extends SQLiteOpenHelper {
 
         db.execSQL("CREATE TABLE wordList(" +
                 "_id INTEGER PRIMARY KEY AUTOINCREMENT,"+
-                "word TEXT DEFAULT NONE)");
+                "word TEXT UNIQUE)");
 
         db.execSQL("CREATE TABLE numberList(" +
                 "_id INTEGER PRIMARY KEY AUTOINCREMENT,"+
-                "number TEXT DEFAULT NONE)");
+                "number TEXT UNIQUE)");
     }
 
     @Override

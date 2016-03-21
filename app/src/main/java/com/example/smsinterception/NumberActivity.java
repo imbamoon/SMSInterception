@@ -1,7 +1,6 @@
 package com.example.smsinterception;
 
 import android.app.AlertDialog;
-import android.app.ListActivity;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.database.Cursor;
@@ -10,7 +9,6 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
@@ -19,12 +17,13 @@ import android.widget.SimpleCursorAdapter;
 
 public class NumberActivity extends AppCompatActivity {
 
-    private Button btnAddNumber;
-
     private SimpleCursorAdapter numListAdapter;
     private SQLiteDatabase dbWrite;
     private SQLiteDatabase dbRead;
     private ListView listViewNum;
+    private Button btnAddNumber;
+    private BlackList blackList;
+    private Cursor cursor;
     private AdapterView.OnItemLongClickListener listViewItemLongClickListener=new AdapterView.OnItemLongClickListener() {
         @Override
         public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
@@ -33,12 +32,14 @@ public class NumberActivity extends AppCompatActivity {
                     .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            Cursor c=numListAdapter.getCursor();
-                            c.moveToPosition(position);
-                            int itemId=c.getInt(c.getColumnIndex("_id"));
-                            dbWrite.delete("numberList","_id=?",new String[]{itemId+""});
-                            Cursor cursor=dbRead.query("numberList",null,null,null,null,null,null);
+                            cursor=numListAdapter.getCursor();
+                            cursor.moveToPosition(position);
+                            int itemId=cursor.getInt(cursor.getColumnIndex("_id"));
+                            cursor.close();
+                            dbWrite.delete("numberList", "_id=?", new String[]{itemId + ""});
+                            cursor=dbRead.query("numberList",null,null,null,null,null,null);
                             numListAdapter.changeCursor(cursor);
+                            listViewNum.setAdapter(numListAdapter);
                         }
                     }).show();
             return true;
@@ -51,15 +52,15 @@ public class NumberActivity extends AppCompatActivity {
 
         listViewNum= (ListView) findViewById(R.id.listViewNum);
         btnAddNumber= (Button) findViewById(R.id.btnAddNumber);
-        BlackList blackList=new BlackList(this);
+        blackList=new BlackList(this);//创建新的黑名单数据库
         dbWrite=blackList.getWritableDatabase();
         dbRead=blackList.getReadableDatabase();
-        numListAdapter=new SimpleCursorAdapter(this,R.layout.num_list_cell,null,new String[]{"number"},new int[]{R.id.blackNum});
-        Cursor cursor=dbRead.query("numberList",null,null,null,null,null,null);
-        numListAdapter.changeCursor(cursor);
-        listViewNum.setOnItemLongClickListener(listViewItemLongClickListener);
+        cursor=dbRead.query("numberList",null,null,null,null,null,null);
+        numListAdapter=new SimpleCursorAdapter(this,R.layout.num_list_cell,cursor,new String[]{"number"},new int[]{R.id.blackNum});
         listViewNum.setAdapter(numListAdapter);
-
+        //设置长按删除点击事件
+        listViewNum.setOnItemLongClickListener(listViewItemLongClickListener);
+        //设置添加按钮点击事件
         btnAddNumber.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -73,20 +74,16 @@ public class NumberActivity extends AppCompatActivity {
                         .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                BlackList blackList = new BlackList(getApplicationContext());
-                                SQLiteDatabase dbWrite = blackList.getWritableDatabase();
                                 if (!etNum.getText().toString().equals("")) {
-                                    ContentValues contentValues = new ContentValues();
-                                    contentValues.put("number", etNum.getText().toString());
-                                    dbWrite.insert("numberList", null, contentValues);
-                                    dbWrite.close();
+
+                                        ContentValues contentValues = new ContentValues();
+                                        contentValues.put("number", etNum.getText().toString());
+                                        dbWrite.insert("numberList", null, contentValues);
                                 }
-                                SQLiteDatabase dbRead = blackList.getReadableDatabase();
-                                Cursor cursor = dbRead.query("numberList", null, null, null, null, null, null);
+                                cursor = dbRead.query("numberList", null, null, null, null, null, null);
                                 numListAdapter.changeCursor(cursor);
                                 listViewNum.setAdapter(numListAdapter);
                                 etNum.setText("");
-                                dbRead.close();
                             }
                         })
                         .setNegativeButton("取消", new DialogInterface.OnClickListener() {
@@ -98,5 +95,15 @@ public class NumberActivity extends AppCompatActivity {
                         .show();
             }
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        dbWrite.close();
+        dbRead.close();
+        if (cursor!=null){
+            cursor.close();
+        }
+        super.onDestroy();
     }
 }

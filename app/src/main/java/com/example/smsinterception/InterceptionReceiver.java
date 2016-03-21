@@ -45,19 +45,20 @@ public class InterceptionReceiver extends BroadcastReceiver{
                     break;
                 }
             }//屏蔽关键字
+            cursorWord.close();
 
             Cursor cursorNum = dbRead.query("numberList", new String[]{"number"}, null, null, null, null, null);
             while (cursorNum.moveToNext()){
                 String key=cursorNum.getString(cursorNum.getColumnIndex("number"));//key就是在黑名单中的电话号
-                if (key==address){
+                if (address.equals(key)){
                     abortBroadcast();
                     flag=true;
                     break;
                 }
             }//屏蔽电话号
+            cursorNum.close();
 
-
-            if (flag==true){//如果该短信被屏蔽，则放入blackList
+            if (flag){//如果该短信被屏蔽，则放入blackList
                 SQLiteDatabase dbWrite=blackList.getWritableDatabase();
                 ContentValues contentValues=new ContentValues();
                 contentValues.put("date",date.toString());
